@@ -1,93 +1,155 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>TAV番付表（自動更新）</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TAVプレミア番付表</title>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+  <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
   <style>
-    body {
-      font-family: "Yu Mincho", "Hiragino Mincho Pro", serif;
-      background: #f7f7f7;
-      padding: 20px;
-    }
-    h1 {
-      text-align: center;
-      margin-bottom: 30px;
-    }
-    table {
-      border-collapse: collapse;
-      width: 100%;
-      max-width: 960px;
-      margin: 0 auto;
-      background: #fff;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 10px;
-      text-align: center;
-    }
-    th {
-      background-color: #eee;
-    }
-    tr:nth-child(even) td {
-      background-color: #f9f9f9;
-    }
-
-    .横綱 td { background-color: #f1c40f; font-weight: bold; }
-    .大関 td { background-color: #e67e22; font-weight: bold; }
-    .関脇 td { background-color: #3498db; color: white; font-weight: bold; }
-    .小結 td { background-color: #1abc9c; color: white; }
-    .名誉小結 td { background-color: #9b59b6; color: white; }
-    .名誉前頭筆頭 td { background-color: #e84393; color: white; }
-    .前頭筆頭 td { background-color: #95a5a6; }
-    .前頭２枚目 td { background-color: #dfe6e9; }
+    body { font-family: sans-serif; padding: 10px; background: #f7f7f7; margin: 0; }
+    h1 { font-size: 1.5em; text-align: center; margin-bottom: 20px; }
+    .rank-section { background: white; padding: 10px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 0 5px #ccc; }
+    .rank-title { font-size: 1.2em; margin-bottom: 10px; font-weight: bold; text-align: center; }
+    .east-west-container { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+    .column { flex: 1 1 45%; border: 1px solid #ccc; border-radius: 6px; min-height: 100px; padding: 10px; background: #fff; box-sizing: border-box; }
+    .column h4 { margin-top: 0; text-align: center; font-size: 1em; }
+    .sortable-item { padding: 8px 10px; margin: 5px 0; background: #e9f0ff; border: 1px solid #aaa; border-radius: 4px; cursor: move; font-size: 0.9em; word-break: break-word; }
+    .add-btn { margin-top: 10px; display: block; width: 100%; font-size: 0.9em; padding: 5px; }
+    .input-area { margin-top: 10px; display: flex; flex-direction: column; gap: 5px; }
+    .input-area input { padding: 5px; font-size: 0.9em; width: 100%; box-sizing: border-box; }
 
     @media (max-width: 600px) {
-      th, td { font-size: 14px; padding: 8px; }
+      .column { flex: 1 1 100%; }
     }
   </style>
 </head>
 <body>
-  <h1>TAV番付表（東西）</h1>
-  <table id="csv-table">
-    <thead>
-      <tr>
-        <th>番付</th>
-        <th>東</th>
-        <th>西</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+  <h1>TAVプレミア番付表</h1>
+
+  <div id="rankings"></div>
 
   <script>
-    const csvUrl = "https://docs.google.com/spreadsheets/d/1_tr_y26k4m7f3Vbyjp3bmLhRyB6LAB06HjOMmUvKxeg/export?format=csv";
+    const ranks = ["横綱", "大関", "関脇", "小結", "前頭", "前頭 同", "幕下", "序の口"];
 
-    fetch(csvUrl)
-      .then(response => response.text())
-      .then(data => {
-        const rows = data.trim().split("\\n").slice(1).map(r => r.split(","));
-        const tbody = document.querySelector("#csv-table tbody");
+    function createRankSection(rank) {
+      return `
+        <div class="rank-section" data-rank="${rank}">
+          <div class="rank-title">${rank}</div>
+          <div class="east-west-container">
+            <div class="column east" data-side="東">
+              <h4>東</h4>
+              <ul class="sortable"></ul>
+              <div class="input-area">
+                <input type="text" placeholder="名前" class="name-input">
+                <input type="text" placeholder="リンク (任意)" class="link-input">
+              </div>
+              <button class="add-btn">追加</button>
+            </div>
+            <div class="column west" data-side="西">
+              <h4>西</h4>
+              <ul class="sortable"></ul>
+              <div class="input-area">
+                <input type="text" placeholder="名前" class="name-input">
+                <input type="text" placeholder="リンク (任意)" class="link-input">
+              </div>
+              <button class="add-btn">追加</button>
+            </div>
+          </div>
+        </div>`;
+    }
 
-        rows.forEach(([rank, east, west]) => {
-          const tr = document.createElement("tr");
-          const rankClass = rank.replace(/\\s+/g, "").replace(/・/g, "").replace(/　/g, "");
-          tr.className = rankClass;
+    function loadData() {
+      const saved = JSON.parse(localStorage.getItem("tavRankings"));
+      if (saved) {
+        loadFromLocalStorage(saved);
+      } else {
+        loadFromGoogleSheet();
+      }
+    }
 
-          [rank, east, west].forEach(text => {
-            const td = document.createElement("td");
-            td.textContent = text;
-            tr.appendChild(td);
-          });
-
-          tbody.appendChild(tr);
+    function loadFromLocalStorage(data) {
+      ranks.forEach(rank => {
+        $("#rankings").append(createRankSection(rank));
+        ["東", "西"].forEach(side => {
+          const list = data[rank]?.[side] || [];
+          list.forEach(entry => addItem(rank, side, entry.name, entry.url));
         });
-      })
-      .catch(error => {
-        document.querySelector("#csv-table tbody").innerHTML =
-          "<tr><td colspan='3'>CSVの読み込みに失敗しました。</td></tr>";
-        console.error("読み込みエラー:", error);
       });
+    }
+
+    function loadFromGoogleSheet() {
+      const url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSuuZ111XMCJ5EvhRSg4uG8nRHsyvCOMiulKEceUeuFBAU5ktPYlV4NE06X8Y6xatNEdwDX_qZ744Dl/pub?output=csv';
+      Papa.parse(url, {
+        download: true,
+        header: true,
+        complete: function(results) {
+          const rows = results.data;
+          const structured = {};
+          ranks.forEach(r => structured[r] = { 東: [], 西: [] });
+          rows.forEach(row => {
+            const rank = row["段位"];
+            const side = row["東西"];
+            const name = row["名前"];
+            const url = row["URL"];
+            if (structured[rank] && structured[rank][side]) {
+              structured[rank][side].push({ name, url });
+            }
+          });
+          loadFromLocalStorage(structured);
+          localStorage.setItem("tavRankings", JSON.stringify(structured));
+        }
+      });
+    }
+
+    function addItem(rank, side, name, url) {
+      const $ul = $(`[data-rank='${rank}'] .column[data-side='${side}'] ul`);
+      const display = url ? `<a href="${url}" target="_blank">${name}</a>` : name;
+      $ul.append(`<li class="sortable-item" data-name="${name}" data-url="${url}">${display}</li>`);
+      saveData();
+    }
+
+    function saveData() {
+      const data = {};
+      $(".rank-section").each(function() {
+        const rank = $(this).data("rank");
+        data[rank] = { 東: [], 西: [] };
+        ["東", "西"].forEach(side => {
+          $(this).find(`.column[data-side='${side}'] ul li`).each(function() {
+            data[rank][side].push({
+              name: $(this).data("name"),
+              url: $(this).data("url")
+            });
+          });
+        });
+      });
+      localStorage.setItem("tavRankings", JSON.stringify(data));
+    }
+
+    $(document).ready(function() {
+      loadData();
+
+      $(document).on("mouseenter", ".sortable", function() {
+        $(this).sortable({
+          update: function() {
+            saveData();
+          }
+        });
+      });
+
+      $(document).on("click", ".add-btn", function() {
+        const $col = $(this).closest(".column");
+        const name = $col.find(".name-input").val();
+        const url = $col.find(".link-input").val();
+        if (!name) return alert("名前を入力してください");
+        const rank = $(this).closest(".rank-section").data("rank");
+        const side = $col.data("side");
+        addItem(rank, side, name, url);
+        $col.find("input").val("");
+      });
+    });
   </script>
 </body>
 </html>
