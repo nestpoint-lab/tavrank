@@ -1,91 +1,93 @@
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <title>TAVプレミア番付表（自動連携）</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TAV番付表（自動更新）</title>
   <style>
     body {
-      font-family: sans-serif;
+      font-family: "Yu Mincho", "Hiragino Mincho Pro", serif;
+      background: #f7f7f7;
       padding: 20px;
     }
-    h2 {
-      margin-top: 40px;
-      border-bottom: 2px solid #ccc;
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
     }
-    .rank-section {
-      display: flex;
-      gap: 20px;
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      max-width: 960px;
+      margin: 0 auto;
+      background: #fff;
     }
-    .side {
-      flex: 1;
-    }
-    .side h3 {
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
       text-align: center;
     }
-    ul {
-      list-style: none;
-      padding: 0;
-      min-height: 50px;
-      border: 1px solid #ddd;
-      background: #f9f9f9;
+    th {
+      background-color: #eee;
     }
-    li {
-      padding: 8px;
-      margin: 4px;
-      background: #fff;
-      border: 1px solid #ccc;
+    tr:nth-child(even) td {
+      background-color: #f9f9f9;
+    }
+
+    .横綱 td { background-color: #f1c40f; font-weight: bold; }
+    .大関 td { background-color: #e67e22; font-weight: bold; }
+    .関脇 td { background-color: #3498db; color: white; font-weight: bold; }
+    .小結 td { background-color: #1abc9c; color: white; }
+    .名誉小結 td { background-color: #9b59b6; color: white; }
+    .名誉前頭筆頭 td { background-color: #e84393; color: white; }
+    .前頭筆頭 td { background-color: #95a5a6; }
+    .前頭２枚目 td { background-color: #dfe6e9; }
+
+    @media (max-width: 600px) {
+      th, td { font-size: 14px; padding: 8px; }
     }
   </style>
 </head>
 <body>
-  <h1>TAVプレミア番付表（スプレッドシート自動反映）</h1>
-  <div id="container"></div>
+  <h1>TAV番付表（東西）</h1>
+  <table id="csv-table">
+    <thead>
+      <tr>
+        <th>番付</th>
+        <th>東</th>
+        <th>西</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
-  <script src="https://cdn.jsdelivr.net/npm/tabletop@1.6.0/tabletop.min.js"></script>
   <script>
-    function createRankSection(rankName, eastList, westList) {
-      const section = document.createElement('div');
-      section.innerHTML = `
-        <h2>${rankName}</h2>
-        <div class="rank-section">
-          <div class="side">
-            <h3>東</h3>
-            <ul>${eastList.map(p => '<li>' + (p.link ? `<a href="${p.link}" target="_blank">${p.name}</a>` : p.name) + '</li>').join('')}</ul>
-          </div>
-          <div class="side">
-            <h3>西</h3>
-            <ul>${westList.map(p => '<li>' + (p.link ? `<a href="${p.link}" target="_blank">${p.name}</a>` : p.name) + '</li>').join('')}</ul>
-          </div>
-        </div>
-      `;
-      return section;
-    }
+    const csvUrl = "https://docs.google.com/spreadsheets/d/1_tr_y26k4m7f3Vbyjp3bmLhRyB6LAB06HjOMmUvKxeg/export?format=csv";
 
-    function render(data) {
-      const grouped = {};
-      data.forEach(row => {
-        const rank = row['TAV番付表'].trim();
-        if (!grouped[rank]) grouped[rank] = { 東: [], 西: [] };
-        if (row['東']) grouped[rank].東.push({ name: row['東'].trim(), link: '' });
-        if (row['西']) grouped[rank].西.push({ name: row['西'].trim(), link: '' });
+    fetch(csvUrl)
+      .then(response => response.text())
+      .then(data => {
+        const rows = data.trim().split("\\n").slice(1).map(r => r.split(","));
+        const tbody = document.querySelector("#csv-table tbody");
+
+        rows.forEach(([rank, east, west]) => {
+          const tr = document.createElement("tr");
+          const rankClass = rank.replace(/\\s+/g, "").replace(/・/g, "").replace(/　/g, "");
+          tr.className = rankClass;
+
+          [rank, east, west].forEach(text => {
+            const td = document.createElement("td");
+            td.textContent = text;
+            tr.appendChild(td);
+          });
+
+          tbody.appendChild(tr);
+        });
+      })
+      .catch(error => {
+        document.querySelector("#csv-table tbody").innerHTML =
+          "<tr><td colspan='3'>CSVの読み込みに失敗しました。</td></tr>";
+        console.error("読み込みエラー:", error);
       });
-
-      const container = document.getElementById('container');
-      container.innerHTML = '';
-      for (const rank in grouped) {
-        const sec = createRankSection(rank || '無題', grouped[rank].東, grouped[rank].西);
-        container.appendChild(sec);
-      }
-    }
-
-    window.addEventListener('DOMContentLoaded', () => {
-      Tabletop.init({
-        key: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT8I-JfASy-YRfrqavmTAz48JEeywwDFipz1facyuMXGJfC-ciiee5kaP9EnhEKBgTkJmEDxoMfO3Nd/pub?output=csv',
-        callback: render,
-        simpleSheet: true
-      });
-    });
   </script>
 </body>
 </html>
