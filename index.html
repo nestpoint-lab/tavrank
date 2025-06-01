@@ -3,71 +3,49 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>TAV番付表（自動更新）</title>
-  <link href="https://fonts.googleapis.com/css2?family=Kiwi+Maru&display=swap" rel="stylesheet">
+  <title>TAV番付表（リンク付き）</title>
   <style>
     body {
-      font-family: 'Kiwi Maru', serif;
-      background: url('https://images.unsplash.com/photo-1586076915307-4f1346f61e6b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80');
+      font-family: 'Yu Mincho', serif;
+      background-image: url('https://images.unsplash.com/photo-1549887534-106ba1d6d369?ixlib=rb-4.0.3&auto=format&fit=crop&w=1950&q=80');
       background-size: cover;
       background-attachment: fixed;
-      color: #333;
       padding: 20px;
     }
     h1 {
       text-align: center;
-      background-color: rgba(255, 255, 255, 0.8);
-      padding: 10px;
-      border-radius: 10px;
-      font-size: 2em;
+      color: #fff;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
     }
     table {
-      width: 100%;
-      max-width: 1000px;
-      margin: 30px auto;
       border-collapse: collapse;
+      width: 100%;
+      max-width: 960px;
+      margin: 20px auto;
       background: rgba(255, 255, 255, 0.95);
-      border-radius: 8px;
-      overflow: hidden;
     }
     th, td {
-      border: 1px solid #aaa;
-      padding: 10px;
+      border: 1px solid #999;
+      padding: 8px;
       text-align: center;
     }
     th {
       background-color: #eee;
     }
     tr:nth-child(even) {
-      background-color: #fdfdfd;
+      background-color: #f9f9f9;
     }
-
-    /* 番付ごとの色分け */
-    tr td:first-child {
-      font-weight: bold;
+    td a {
+      color: #1a0dab;
+      text-decoration: none;
     }
-    tr td:first-child:contains("横綱"),
-    tr td:first-child:contains("大関") {
-      background-color: #ffe0e0;
-    }
-    tr td:first-child:contains("関脇"),
-    tr td:first-child:contains("小結") {
-      background-color: #e0f0ff;
-    }
-    tr td:first-child:contains("前頭") {
-      background-color: #e0ffe0;
-    }
-    tr td:first-child:contains("十両") {
-      background-color: #fffbe0;
-    }
-    tr td:first-child:contains("序の口"),
-    tr td:first-child:contains("序二段") {
-      background-color: #f0f0f0;
+    td a:hover {
+      text-decoration: underline;
     }
   </style>
 </head>
 <body>
-  <h1>TAV番付表（自動更新）</h1>
+  <h1>TAV番付表（自動更新＆リンク付き）</h1>
   <table id="banzuke-table"></table>
 
   <script>
@@ -81,11 +59,27 @@
 
         rows.forEach((row, i) => {
           const tr = document.createElement('tr');
+
           row.forEach((cell, j) => {
             const el = i === 0 ? document.createElement('th') : document.createElement('td');
-            el.textContent = cell;
+
+            // HYPERLINK関数形式に対応
+            const match = cell.match(/=HYPERLINK\("(.+?)","(.+?)"\)/);
+            if (match) {
+              const url = match[1];
+              const text = match[2];
+              const a = document.createElement("a");
+              a.href = url;
+              a.textContent = text;
+              a.target = "_blank";
+              el.appendChild(a);
+            } else {
+              el.textContent = cell;
+            }
+
             tr.appendChild(el);
           });
+
           table.appendChild(tr);
         });
       })
