@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>TAV番付表（東西2列・色分け）</title>
+  <title>TAV番付表（自動更新・東西・色分け）</title>
   <style>
     body {
       font-family: sans-serif;
@@ -32,11 +32,20 @@
     tr:nth-child(even) td {
       background-color: #fafafa;
     }
-    .横綱 { background-color: #f1c40f; }
-    .大関 { background-color: #e67e22; }
-    .関脇 { background-color: #3498db; color: #fff; }
-    .小結 { background-color: #1abc9c; color: #fff; }
-    .前頭 { background-color: #bdc3c7; }
+
+    /* 番付ごとの色分け */
+    .横綱 td { background-color: #f1c40f; font-weight: bold; }
+    .大関 td { background-color: #e67e22; font-weight: bold; }
+    .関脇 td { background-color: #3498db; color: white; font-weight: bold; }
+    .小結 td { background-color: #1abc9c; color: white; }
+    .名誉小結 td { background-color: #9b59b6; color: white; }
+    .名誉前頭筆頭 td { background-color: #e84393; color: white; }
+    .前頭筆頭 td { background-color: #95a5a6; }
+    .前頭２枚目 td { background-color: #dfe6e9; }
+
+    @media (max-width: 600px) {
+      th, td { font-size: 14px; padding: 8px; }
+    }
   </style>
 </head>
 <body>
@@ -59,26 +68,16 @@
       .then(response => response.text())
       .then(data => {
         const rows = data.trim().split("\\n").slice(1).map(r => r.split(","));
-        const grouped = {};
-
-        rows.forEach(([rank, side, name]) => {
-          if (!grouped[rank]) grouped[rank] = { 東: "", 西: "" };
-          grouped[rank][side] = name;
-        });
-
         const tbody = document.querySelector("#csv-table tbody");
-        Object.entries(grouped).forEach(([rank, sides]) => {
+
+        rows.forEach(([rank, east, west]) => {
           const tr = document.createElement("tr");
-          tr.className = rank;
-          const tdRank = document.createElement("td");
-          tdRank.textContent = rank;
-          const tdEast = document.createElement("td");
-          tdEast.textContent = sides["東"] || "";
-          const tdWest = document.createElement("td");
-          tdWest.textContent = sides["西"] || "";
-          tr.appendChild(tdRank);
-          tr.appendChild(tdEast);
-          tr.appendChild(tdWest);
+          tr.className = rank.replace(/\\s+/g, "").replace("・", "");  // class名に使用するため整形
+          [rank, east, west].forEach(text => {
+            const td = document.createElement("td");
+            td.textContent = text;
+            tr.appendChild(td);
+          });
           tbody.appendChild(tr);
         });
       })
