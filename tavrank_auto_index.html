@@ -3,23 +3,30 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>TAV番付表（自動更新・東西・色分け）</title>
+  <title>TAV番付表（自動更新）</title>
   <style>
     body {
-      font-family: sans-serif;
-      background: #f7f7f7;
+      font-family: "Yu Mincho", "Hiragino Mincho Pro", serif;
+      background: url("https://images.unsplash.com/photo-1549880338-65ddcdfd017b?auto=format&fit=crop&w=1400&q=80") no-repeat center center fixed;
+      background-size: cover;
       padding: 20px;
+      color: #222;
     }
     h1 {
       text-align: center;
       margin-bottom: 30px;
+      background: rgba(255,255,255,0.8);
+      padding: 10px;
+      border-radius: 8px;
     }
     table {
       border-collapse: collapse;
       width: 100%;
       max-width: 960px;
       margin: 0 auto;
-      background: #fff;
+      background: rgba(255,255,255,0.9);
+      border-radius: 12px;
+      overflow: hidden;
     }
     th, td {
       border: 1px solid #ccc;
@@ -27,13 +34,13 @@
       text-align: center;
     }
     th {
-      background-color: #f0f0f0;
+      background-color: #eee;
     }
     tr:nth-child(even) td {
-      background-color: #fafafa;
+      background-color: #f9f9f9;
     }
 
-    /* 番付ごとの色分け */
+    /* 番付の色分け */
     .横綱 td { background-color: #f1c40f; font-weight: bold; }
     .大関 td { background-color: #e67e22; font-weight: bold; }
     .関脇 td { background-color: #3498db; color: white; font-weight: bold; }
@@ -49,7 +56,7 @@
   </style>
 </head>
 <body>
-  <h1>TAV番付表（東西）</h1>
+  <h1>TAV番付表（自動連携）</h1>
   <table id="csv-table">
     <thead>
       <tr>
@@ -72,12 +79,15 @@
 
         rows.forEach(([rank, east, west]) => {
           const tr = document.createElement("tr");
-          tr.className = rank.replace(/\\s+/g, "").replace("・", "");  // class名に使用するため整形
+          const rankClass = rank.replace(/\\s+/g, "").replace(/・/g, "").replace(/　/g, "");
+          tr.className = rankClass;
+
           [rank, east, west].forEach(text => {
             const td = document.createElement("td");
             td.textContent = text;
             tr.appendChild(td);
           });
+
           tbody.appendChild(tr);
         });
       })
