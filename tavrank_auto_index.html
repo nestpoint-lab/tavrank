@@ -1,0 +1,91 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>TAVプレミア番付表（自動連携）</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+    }
+    h2 {
+      margin-top: 40px;
+      border-bottom: 2px solid #ccc;
+    }
+    .rank-section {
+      display: flex;
+      gap: 20px;
+    }
+    .side {
+      flex: 1;
+    }
+    .side h3 {
+      text-align: center;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+      min-height: 50px;
+      border: 1px solid #ddd;
+      background: #f9f9f9;
+    }
+    li {
+      padding: 8px;
+      margin: 4px;
+      background: #fff;
+      border: 1px solid #ccc;
+    }
+  </style>
+</head>
+<body>
+  <h1>TAVプレミア番付表（スプレッドシート自動反映）</h1>
+  <div id="container"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/tabletop@1.6.0/tabletop.min.js"></script>
+  <script>
+    function createRankSection(rankName, eastList, westList) {
+      const section = document.createElement('div');
+      section.innerHTML = `
+        <h2>${rankName}</h2>
+        <div class="rank-section">
+          <div class="side">
+            <h3>東</h3>
+            <ul>${eastList.map(p => '<li>' + (p.link ? `<a href="${p.link}" target="_blank">${p.name}</a>` : p.name) + '</li>').join('')}</ul>
+          </div>
+          <div class="side">
+            <h3>西</h3>
+            <ul>${westList.map(p => '<li>' + (p.link ? `<a href="${p.link}" target="_blank">${p.name}</a>` : p.name) + '</li>').join('')}</ul>
+          </div>
+        </div>
+      `;
+      return section;
+    }
+
+    function render(data) {
+      const grouped = {};
+      data.forEach(row => {
+        const rank = row['TAV番付表'].trim();
+        if (!grouped[rank]) grouped[rank] = { 東: [], 西: [] };
+        if (row['東']) grouped[rank].東.push({ name: row['東'].trim(), link: '' });
+        if (row['西']) grouped[rank].西.push({ name: row['西'].trim(), link: '' });
+      });
+
+      const container = document.getElementById('container');
+      container.innerHTML = '';
+      for (const rank in grouped) {
+        const sec = createRankSection(rank || '無題', grouped[rank].東, grouped[rank].西);
+        container.appendChild(sec);
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      Tabletop.init({
+        key: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT8I-JfASy-YRfrqavmTAz48JEeywwDFipz1facyuMXGJfC-ciiee5kaP9EnhEKBgTkJmEDxoMfO3Nd/pub?output=csv',
+        callback: render,
+        simpleSheet: true
+      });
+    });
+  </script>
+</body>
+</html>
