@@ -3,50 +3,91 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>TAV番付表（リンク付き）</title>
+  <title>TAV番付表</title>
   <style>
     body {
-      font-family: 'Yu Mincho', serif;
-      background-image: url('https://images.unsplash.com/photo-1549887534-106ba1d6d369?ixlib=rb-4.0.3&auto=format&fit=crop&w=1950&q=80');
+      font-family: "Yu Mincho", "Hiragino Mincho Pro", serif;
+      background: url('https://images.unsplash.com/photo-1581291519195-ef11498d1cf5?auto=format&fit=crop&w=1920&q=80') no-repeat center center fixed;
       background-size: cover;
-      background-attachment: fixed;
+      margin: 0;
       padding: 20px;
+      color: #333;
     }
+
     h1 {
       text-align: center;
-      color: #fff;
-      text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+      color: #222;
+      background-color: rgba(255,255,255,0.8);
+      display: inline-block;
+      padding: 10px 20px;
+      border-radius: 12px;
     }
+
     table {
-      border-collapse: collapse;
       width: 100%;
       max-width: 960px;
       margin: 20px auto;
-      background: rgba(255, 255, 255, 0.95);
+      border-collapse: collapse;
+      background-color: rgba(255, 255, 255, 0.95);
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
+
     th, td {
-      border: 1px solid #999;
+      border: 1px solid #aaa;
       padding: 8px;
       text-align: center;
+      word-break: break-word;
     }
+
     th {
-      background-color: #eee;
+      background-color: #eaeaea;
     }
+
     tr:nth-child(even) {
       background-color: #f9f9f9;
     }
-    td a {
+
+    a {
       color: #1a0dab;
       text-decoration: none;
     }
-    td a:hover {
+
+    a:hover {
       text-decoration: underline;
+    }
+
+    /* 番付ランク色分け */
+    .rank-横綱 { background-color: #FFD700; }     /* 金 */
+    .rank-大関 { background-color: #C0C0C0; }     /* 銀 */
+    .rank-関脇, .rank-小結 { background-color: #CD7F32; } /* 銅 */
+    .rank-前頭筆頭,
+    .rank-前頭２枚目,
+    .rank-前頭３枚目,
+    .rank-前頭４枚目 { background-color: #f4f4f4; }
+    .rank-十両１枚目,
+    .rank-十両２枚目,
+    .rank-十両３枚目 { background-color: #e7f7ff; }
+    .rank-序の口 { background-color: #fef9e7; }
+
+    @media screen and (max-width: 600px) {
+      table {
+        font-size: 13px;
+      }
     }
   </style>
 </head>
 <body>
-  <h1>TAV番付表（自動更新＆リンク付き）</h1>
-  <table id="banzuke-table"></table>
+  <h1>TAV番付表（自動更新）</h1>
+  <table id="ranking-table">
+    <thead>
+      <tr>
+        <th>番付</th>
+        <th>東</th>
+        <th>西</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
   <script>
     const csvUrl = "https://docs.google.com/spreadsheets/d/1_tr_y26k4m7f3Vbyjp3bmLhRyB6LAB06HjOMmUvKxeg/export?format=csv";
@@ -54,38 +95,38 @@
     fetch(csvUrl)
       .then(response => response.text())
       .then(csv => {
-        const rows = csv.trim().split('\n').map(r => r.split(','));
-        const table = document.getElementById('banzuke-table');
+        const rows = csv.trim().split("\n").map(row => row.split(","));
+        const tbody = document.querySelector("#ranking-table tbody");
 
-        rows.forEach((row, i) => {
-          const tr = document.createElement('tr');
+        for (let i = 1; i < rows.length; i++) {
+          const [rank, eastName, eastLink, westName, westLink] = rows[i];
 
-          row.forEach((cell, j) => {
-            const el = i === 0 ? document.createElement('th') : document.createElement('td');
+          const tr = document.createElement("tr");
+          tr.className = `rank-${rank}`;
 
-            // HYPERLINK関数形式に対応
-            const match = cell.match(/=HYPERLINK\("(.+?)","(.+?)"\)/);
-            if (match) {
-              const url = match[1];
-              const text = match[2];
-              const a = document.createElement("a");
-              a.href = url;
-              a.textContent = text;
-              a.target = "_blank";
-              el.appendChild(a);
-            } else {
-              el.textContent = cell;
-            }
+          const tdRank = document.createElement("td");
+          tdRank.textContent = rank;
 
-            tr.appendChild(el);
-          });
+          const tdEast = document.createElement("td");
+          tdEast.innerHTML = eastName && eastLink
+            ? `<a href="${eastLink}" target="_blank">${eastName}</a>`
+            : (eastName || "");
 
-          table.appendChild(tr);
-        });
+          const tdWest = document.createElement("td");
+          tdWest.innerHTML = westName && westLink
+            ? `<a href="${westLink}" target="_blank">${westName}</a>`
+            : (westName || "");
+
+          tr.appendChild(tdRank);
+          tr.appendChild(tdEast);
+          tr.appendChild(tdWest);
+          tbody.appendChild(tr);
+        }
       })
       .catch(err => {
-        document.getElementById("banzuke-table").innerHTML = "<tr><td colspan='3'>CSVの読み込みに失敗しました。</td></tr>";
-        console.error("読み込みエラー:", err);
+        console.error("CSV読み込み失敗:", err);
+        const tbody = document.querySelector("#ranking-table tbody");
+        tbody.innerHTML = '<tr><td colspan="3">CSVの読み込みに失敗しました。</td></tr>';
       });
   </script>
 </body>
